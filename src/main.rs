@@ -14,17 +14,25 @@ struct Body {
     mesh: graphics::Mesh,
 }
 
+impl Body {
+    fn new(ctx: &Context, pos: Vec2, mass: f32) -> Result<Body, ggez::GameError> {
+        let body = Body {
+            pos,
+            mass,
+            mesh: make_circle(ctx, pos, 100., Color::WHITE)?,
+        };
+
+        Ok(body)
+    }
+}
+
 struct MainState {
-    pos_x: Vec<f32>,
-    circles: Vec<graphics::Mesh>,
+    bodies: Vec<Body>,
 }
 
 impl MainState {
-    fn new(circles: Vec<graphics::Mesh>) -> GameResult<MainState> {
-        Ok(MainState {
-            pos_x: vec![0., 200.],
-            circles,
-        })
+    fn new(bodies: Vec<Body>) -> GameResult<MainState> {
+        Ok(MainState { bodies })
     }
 }
 
@@ -38,10 +46,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
         let mut canvas =
             graphics::Canvas::from_frame(ctx, graphics::Color::from([0.1, 0.2, 0.3, 1.0]));
 
-        let mut i = 0;
-        for circle in &self.circles {
-            canvas.draw(circle, Vec2::new(self.pos_x[i], 380.0));
-            i += 1;
+        for body in &self.bodies {
+            canvas.draw(&body.mesh, body.pos);
         }
 
         canvas.finish(ctx)?;
@@ -70,10 +76,12 @@ pub fn main() -> GameResult {
     let cb = ggez::ContextBuilder::new("N-Body Visualization", "Vinícius Manuel Martins");
     let (ctx, event_loop) = cb.build()?;
 
-    let circles = vec![
-        make_circle(&ctx, vec2(0., 0.), 100.0, Color::WHITE)?,
-        make_circle(&ctx, vec2(0., 0.), 100.0, Color::WHITE)?,
+    let bodies: Vec<Body> = vec![
+        Body::new(&ctx, vec2(0., 0.), 100.)?,
+        Body::new(&ctx, vec2(100., 0.), 100.)?,
+        Body::new(&ctx, vec2(0., 100.), 100.)?,
+        Body::new(&ctx, vec2(100., 100.), 100.)?,
     ];
-    let state = MainState::new(circles)?;
+    let state = MainState::new(bodies)?;
     event::run(ctx, event_loop, state)
 }
