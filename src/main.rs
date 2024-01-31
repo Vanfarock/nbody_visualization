@@ -1,6 +1,7 @@
 use std::{
     error::Error,
-    fs::{File, OpenOptions},
+    fs::File,
+    io::{prelude::*, BufReader},
 };
 
 use ggez::{
@@ -10,8 +11,9 @@ use ggez::{
     Context, GameResult,
 };
 use nalgebra::Vector3;
+use serde::Deserialize;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Deserialize)]
 struct Body {
     pos: Vector3<f64>,
     vel: Vector3<f64>,
@@ -92,21 +94,27 @@ fn convert_to_point(vector3: &Vector3<f64>) -> Vec2 {
     vec2(vector3.x as f32, vector3.y as f32)
 }
 
-fn open_file(filename: &str) -> Result<File, Box<dyn Error>> {
-    let file = OpenOptions::new().write(true).append(true).open(filename)?;
+fn parse_line(ctx: &Context, line: String) -> Result<Vec<GameObject>, Box<dyn Error>> {
+    let bodies: Vec<Body> = serde_json::from_str(&line)?;
 
-    return Ok(file);
+    let mut game_objects = vec![];
+    for body in bodies.into_iter() {
+        game_objects.push(GameObject::new(ctx, body)?)
+    }
+    Ok(game_objects)
 }
-
-// fn parse_file(file: File) -> Result<Vec<GameObject>, Box<dyn Error>> {
-//     Ok(())
-// }
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     let cb = ggez::ContextBuilder::new("N-Body Visualization", "Vinícius Manuel Martins");
     let (ctx, event_loop) = cb.build()?;
 
-    let file = open_file("test.json")?;
+    let file = File::open("test.json")?;
+    let reader = BufReader::new(file);
+
+    for line in reader.lines() {
+        let bla = parse_line(&ctx, line?)?;
+        println!("{}", bla[0].body.pos);
+    }
 
     let bodies: Vec<GameObject> = vec![
         GameObject::new(
