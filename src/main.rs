@@ -1,7 +1,7 @@
 use std::{
     error::Error,
     fs::File,
-    io::{prelude::*, BufReader},
+    io::{prelude::*, BufReader, Lines},
 };
 
 use ggez::{
@@ -37,7 +37,7 @@ impl GameObject {
     fn new(ctx: &Context, body: Body) -> Result<GameObject, ggez::GameError> {
         let game_object = GameObject {
             body,
-            mesh: make_circle(ctx, &body.pos, 100., Color::WHITE)?,
+            mesh: make_circle(ctx, &body.pos, 5., Color::WHITE)?,
         };
 
         Ok(game_object)
@@ -46,23 +46,40 @@ impl GameObject {
 
 struct MainState {
     game_objects: Vec<GameObject>,
+    buf_reader: Lines<BufReader<File>>,
 }
 
 impl MainState {
-    fn new(game_objects: Vec<GameObject>) -> GameResult<MainState> {
-        Ok(MainState { game_objects })
+    fn new(
+        game_objects: Vec<GameObject>,
+        buf_reader: Lines<BufReader<File>>,
+    ) -> GameResult<MainState> {
+        Ok(MainState {
+            game_objects,
+            buf_reader,
+        })
     }
 }
 
 impl event::EventHandler<ggez::GameError> for MainState {
-    fn update(&mut self, _ctx: &mut Context) -> GameResult {
-        // self.pos_x = self.pos_x % 800.0 + 1.0;
+    fn update(&mut self, ctx: &mut Context) -> GameResult {
+        if let Some(line) = self.buf_reader.next() {
+            match parse_line(ctx, line?) {
+                Ok(game_objects) => {
+                    self.game_objects = game_objects;
+                }
+                Err(err) => {
+                    eprintln!("Error parsing line: {}", err);
+                }
+            }
+        } else {
+            println!("Else");
+        }
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
-        let mut canvas =
-            graphics::Canvas::from_frame(ctx, graphics::Color::from([0.1, 0.2, 0.3, 1.0]));
+        let mut canvas = graphics::Canvas::from_frame(ctx, graphics::Color::from([0., 0., 0., 1.]));
 
         for game_object in &self.game_objects {
             canvas.draw(&game_object.mesh, convert_to_point(&game_object.body.pos));
@@ -111,11 +128,6 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     let file = File::open("test.json")?;
     let reader = BufReader::new(file);
 
-    for line in reader.lines() {
-        let bla = parse_line(&ctx, line?)?;
-        println!("{}", bla[0].body.pos);
-    }
-
     let bodies: Vec<GameObject> = vec![
         GameObject::new(
             &ctx,
@@ -134,6 +146,6 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             Body::new(Vector3::new(100., 100., 0.), Vector3::new(0., 0., 0.), 100.)?,
         )?,
     ];
-    let state = MainState::new(bodies)?;
+    let state = MainState::new(bodies, reader.lines())?;
     event::run(ctx, event_loop, state)
 }
