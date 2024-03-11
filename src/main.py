@@ -1,5 +1,7 @@
 import json
+import os
 
+import ffmpeg
 import pygame
 
 MAX_FPS = 60
@@ -55,7 +57,7 @@ class Game:
             pygame.display.flip()
 
             pygame.image.save(
-                self.screen, f"./screenshots/screenshot_{self.frame:05d}.png"
+                self.screen, f"./screenshots/screenshot_{self.frame:05d}.jpg"
             )
             self.frame += 1
 
@@ -72,16 +74,49 @@ class Game:
         self.game_objects = self.parse_line()
 
     def parse_line(self) -> list[Body]:
-        game_objects = [
-            Body(
-                pos=item["pos"],
-                vel=item["vel"],
-                mass=item["mass"],
-            )
-            for item in json.loads(self.state_file.readline())
-        ]
-        return game_objects
+        if line := self.state_file.readline():
+            game_objects = [
+                Body(
+                    pos=item["pos"],
+                    vel=item["vel"],
+                    mass=item["mass"],
+                )
+                for item in json.loads(line)
+            ]
+            return game_objects
+
+        self.running = False
+        return []
+
+
+def create_screenshots_folder(folder_name: str):
+    try:
+        os.mkdir(folder_name)
+    except FileExistsError:
+        pass
+
+
+def generate_video_from_simulation(input_folder: str, output_file: str):
+    ffmpeg.input(
+        "./screenshots/screenshot_%5d.jpg", pattern_type="sequence", framerate=60
+    ).output(output_file, vcodec="libx264").run(
+        capture_stdout=True, capture_stderr=True
+    )
 
 
 if __name__ == "__main__":
-    Game(width=1000, height=800, filename="test.json").run()
+    folder_name = "screenshots"
+    # create_screenshots_folder(folder_name)
+
+    # game = Game(width=1000, height=800, filename="test.json")
+    # game.run()
+
+    try:
+        generate_video_from_simulation(
+            input_folder=f"./{folder_name}/*.png",
+            output_file="simulation01.mp4",
+        )
+    except Exception as e:
+        print("stdout", e.stdout.decode("utf-8"))
+        print("stderr", e.stderr.decode("utf-8"))
+        raise e

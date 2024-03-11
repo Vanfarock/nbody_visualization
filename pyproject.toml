@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "nbody-visualization"
+version = "0.1.0"
+description = ""
+authors = ["Vanfarock <vinicius.m.m.2002@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pygame = "^2.5.2"
+ffmpeg-python = "^0.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
