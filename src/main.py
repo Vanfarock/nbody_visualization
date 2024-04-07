@@ -27,18 +27,23 @@ class Body:
 
 
 class Game:
-    def __init__(self, width: int, height: int, filename: str):
+    def __init__(
+        self, width: int, height: int, zoom: int, particle_radius: int, filename: str
+    ):
         self.width = width
         self.height = height
+        self.particle_radius = particle_radius
+        self.zoom = zoom
+
         self.running = True
         self.screen = pygame.display.set_mode((width, height))
         self.clock = pygame.time.Clock()
 
         self.state_file = open(filename, "r")
 
-        self.game_objects = self.parse_line()
-
         self.frame = 0
+
+        self.game_objects = self.parse_line()
 
     def run(self):
         pygame.init()
@@ -66,18 +71,36 @@ class Game:
             if event.type == pygame.QUIT:
                 self.running = False
 
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_PLUS or event.key == pygame.K_KP_PLUS:
+                    self.zoom *= 1.1
+                elif event.key == pygame.K_MINUS or event.key == pygame.K_KP_MINUS:
+                    self.zoom /= 1.1
+
     def draw(self):
         for body in self.game_objects:
-            pygame.draw.circle(self.screen, Color.WHITE, (body.pos[0], body.pos[1]), 5)
+            pygame.draw.circle(
+                self.screen,
+                Color.WHITE,
+                (body.pos[0], body.pos[1]),
+                self.particle_radius,
+            )
 
     def update(self):
         self.game_objects = self.parse_line()
 
     def parse_line(self) -> list[Body]:
+        hw = self.width // 2
+        hh = self.height // 2
+        print(self.frame)
         if line := self.state_file.readline():
             game_objects = [
                 Body(
-                    pos=item["pos"],
+                    pos=[
+                        item["pos"][0] * self.zoom + hw,
+                        item["pos"][1] * self.zoom + hh,
+                        item["pos"][2],
+                    ],
                     vel=item["vel"],
                     mass=item["mass"],
                 )
@@ -106,17 +129,27 @@ def generate_video_from_simulation(input_folder: str, output_file: str):
 
 if __name__ == "__main__":
     folder_name = "screenshots"
-    # create_screenshots_folder(folder_name)
+    create_screenshots_folder(folder_name)
 
-    # game = Game(width=1000, height=800, filename="test.json")
-    # game.run()
+    game = Game(
+        width=1000,
+        height=800,
+        zoom=50,
+        particle_radius=5,
+        # filename="infinity.json",
+        filename="predicted_infinity_v2.json",
+        # filename="random_0.json",
+        # filename="predicted_random_0.json",
+    )
+    game.run()
 
-    try:
-        generate_video_from_simulation(
-            input_folder=f"./{folder_name}/*.png",
-            output_file="simulation01.mp4",
-        )
-    except Exception as e:
-        print("stdout", e.stdout.decode("utf-8"))
-        print("stderr", e.stderr.decode("utf-8"))
-        raise e
+    # try:
+    #     print("Starting video parsing")
+    #     generate_video_from_simulation(
+    #         input_folder=f"./{folder_name}/*.png",
+    #         output_file="simulation01.mp4",
+    #     )
+    # except Exception as e:
+    #     print("stdout", e.stdout.decode("utf-8"))
+    #     print("stderr", e.stderr.decode("utf-8"))
+    #     raise e
