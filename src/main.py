@@ -134,12 +134,16 @@ if __name__ == "__main__":
     game = Game(
         width=1000,
         height=800,
-        zoom=50,
-        particle_radius=5,
+        zoom=100,
+        particle_radius=1,
         # filename="infinity.json",
-        filename="predicted_infinity_v2.json",
+        # filename="predicted_infinity_v2.json",
         # filename="random_0.json",
         # filename="predicted_random_0.json",
+        # filename="64_000_true.json",
+        # filename="64_000_predicted.json",
+        # filename="64_000_1_true.json",
+        filename="64_000_1_predicted.json",
     )
     game.run()
 
