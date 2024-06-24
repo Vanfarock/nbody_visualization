@@ -1,5 +1,6 @@
 import json
 import os
+import random
 
 import ffmpeg
 import pygame
@@ -10,6 +11,9 @@ MAX_FPS = 60
 class Color:
     BLACK = (0, 0, 0)
     WHITE = (255, 255, 255)
+    RED = (235, 64, 52)
+    GREEN = (105, 232, 90)
+    BLUE = (91, 148, 240)
 
 
 class Body:
@@ -28,7 +32,14 @@ class Body:
 
 class Game:
     def __init__(
-        self, width: int, height: int, zoom: int, particle_radius: int, filename: str
+        self,
+        width: int,
+        height: int,
+        zoom: int,
+        particle_radius: int,
+        trail_thickness: int,
+        max_trail_delay: int,
+        filename: str,
     ):
         self.width = width
         self.height = height
@@ -39,11 +50,25 @@ class Game:
         self.screen = pygame.display.set_mode((width, height))
         self.clock = pygame.time.Clock()
 
-        self.state_file = open(filename, "r")
+        self.state_file = open(os.path.join(os.path.dirname(__file__), filename), "r")
 
         self.frame = 0
 
         self.game_objects = self.parse_line()
+        self.trail_lines = []
+        self.trail_thickness = trail_thickness
+        self.max_trail_delay = max_trail_delay
+        self.color_map = {
+            0: Color.RED,
+            1: Color.GREEN,
+            2: Color.BLUE,
+        }
+        for i in range(3, len(self.game_objects)):
+            self.color_map[i] = (
+                random.randint(0, 255),
+                random.randint(0, 255),
+                random.randint(0, 255),
+            )
 
     def run(self):
         pygame.init()
@@ -78,21 +103,36 @@ class Game:
                     self.zoom /= 1.1
 
     def draw(self):
-        for body in self.game_objects:
+        for i, body in enumerate(self.game_objects):
             pygame.draw.circle(
                 self.screen,
-                Color.WHITE,
+                self.color_map[i],
                 (body.pos[0], body.pos[1]),
                 self.particle_radius,
             )
 
+        for i in range(1, len(self.trail_lines)):
+            for j in range(len(self.trail_lines[i])):
+                pygame.draw.line(
+                    self.screen,
+                    self.color_map[j],
+                    (self.trail_lines[i][j][0], self.trail_lines[i][j][1]),
+                    (self.trail_lines[i - 1][j][0], self.trail_lines[i - 1][j][1]),
+                    int(self.trail_thickness * (1 - i / self.max_trail_delay)),
+                )
+
     def update(self):
         self.game_objects = self.parse_line()
+
+        self.trail_lines.insert(
+            0, [(obj.pos[0], obj.pos[1]) for obj in self.game_objects]
+        )
+        if len(self.trail_lines) >= self.max_trail_delay:
+            self.trail_lines.pop()
 
     def parse_line(self) -> list[Body]:
         hw = self.width // 2
         hh = self.height // 2
-        print(self.frame)
         if line := self.state_file.readline():
             game_objects = [
                 Body(
@@ -105,6 +145,7 @@ class Game:
                     mass=item["mass"],
                 )
                 for item in json.loads(line)
+                if item["mass"] != 0
             ]
             return game_objects
 
@@ -135,15 +176,23 @@ if __name__ == "__main__":
         width=1000,
         height=800,
         zoom=100,
-        particle_radius=1,
-        # filename="infinity.json",
-        # filename="predicted_infinity_v2.json",
-        # filename="random_0.json",
-        # filename="predicted_random_0.json",
-        # filename="64_000_true.json",
-        # filename="64_000_predicted.json",
-        # filename="64_000_1_true.json",
-        filename="64_000_1_predicted.json",
+        particle_radius=15,
+        trail_thickness=15,
+        max_trail_delay=15,
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/10_true.json",
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/10_predicted.json",
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/infinity_true.json",
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/ann_infinity.json",
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/rnn_infinity.json",
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/cnn_infinity.json",
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/discovery_ann_infinity.json",
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/discovery_rnn_infinity.json",
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/discovery_cnn_infinity.json",
+        filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/random_0.txt",
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/random_8.txt",
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/random_9.txt",
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/random_10.txt",
+        # filename="C:/Users/vinic/Documents/nbody_visualization/results/state_files/lagrange.txt",
     )
     game.run()
 
